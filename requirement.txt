@@ -68,6 +68,6 @@ termcolor==2.3.0
 tifffile==2023.9.26
 typing_extensions==4.8.0
 urllib3==2.0.7
-uvicorn==0.24.0.post1
+uvicorn==0.12.3
 Werkzeug==3.0.1
 wrapt==1.14.1
