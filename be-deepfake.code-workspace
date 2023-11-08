@@ -1,0 +1,11 @@
+{
+	"folders": [
+		{
+			"name": "be-deepfake",
+			"path": "."
+		}
+	],
+	"settings": {
+		"git.ignoreLimitWarning": true
+	}
+}
