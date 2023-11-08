@@ -1,38 +1,16 @@
-
-import uvicorn# tambahan
-from collections import Counter
-
-# webserver part
-from collections import Counter
-from fastapi import FastAPI, UploadFile, File
-from fastapi.middleware.cors import CORSMiddleware
-
-# cnn part
+from flask import Flask, request, jsonify
+from flask_cors import CORS
+from werkzeug.utils import secure_filename
 import tensorflow as tf
 import numpy as np
 import cv2
-from imgaug import augmenters as iaa
 import os
-import aiofiles
+from imgaug import augmenters as iaa
+from collections import Counter
 
-# webserver code start
-app = FastAPI()
-# webserver code end
 
-origins = ["http://localhost:3000"]  
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["POST", "GET", "OPTIONS", "PUT", "DELETE", "HEAD"],
-    allow_headers=[
-        "custId", "appId", "Origin", "Content-Type", "Cookie", "X-CSRF-TOKEN",
-        "Accept", "Authorization", "X-XSRF-TOKEN", "Access-Control-Allow-Origin",
-        "X-Requested-With",
-    ],
-    expose_headers=["Authorization", "authenticated"],
-    max_age=1728000,
-    allow_credentials=True,
-)
+app = Flask(__name__)
+CORS(app)
 
 # AI code
 resnet50 = tf.keras.applications.resnet50.ResNet50(include_top=False, weights='imagenet')
@@ -192,33 +170,39 @@ def voting(filepath):
     majority_vote = find_majority_vote(items)
 
     if majority_vote == "{'real'}":
-        return {"Gambar Asli"}
+        return "Gambar Asli"
     elif majority_vote == "{'deepfake'}":
-        return {"Gambar Deepfake"}
+        return "Gambar Deepfake"
     else:
-        return {"tidak dapat mendeteksi"}
+        return "tidak dapat mendeteksi"
 
 # AI code done
 
-@app.get("/hello-world")
-async def root():
-    return {"message": "Hello World"}
+def hello_world():
+    return jsonify({"message": "Hello World"})
 
-@app.post("/predict")
-async def predict(file: UploadFile):
-    if file.filename.endswith(".jpg") or file.filename.endswith(".jpeg"):
-        file_location = f"public/{file.filename}"
-        with open(file_location, "wb+") as file_object:
-            file_object.write(file.file.read())
+@app.route('/predict', methods=['POST'])
+def predict():
+    if 'file' not in request.files:
+        return jsonify({"error": "No file part"}), 400
+    
+    file = request.files['file']
+    
+    if file.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+    
+    if file and file.filename.endswith(('.jpg', '.jpeg')):
+        filename = secure_filename(file.filename)
+        file_location = os.path.join('public', filename)
+        file.save(file_location)
 
         if detect_face(file_location):
-            return voting(file_location)
+            result = voting(file_location)
+            return jsonify(result)
         else:
-            return {"error": "Tidak ada wajah yang terdeteksi dalam gambar."}
+            return "No face detected in the image."
     else:
-        {"error": "invalid image type, must be jpg or jpeg"} 
-    return {"Format data tidak valid"}
+        return "Invalid image type, must be jpg or jpeg", 400
 
-# Run the server
 if __name__ == "__main__":
-     uvicorn.run("main:app", host="0.0.0.0", port=os.getenv("PORT", default=5000), log_level="info")
+    app.run(host="0.0.0.0", port=8000)
